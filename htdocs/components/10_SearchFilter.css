@@ -1,0 +1,18 @@
+div.search_filter {
+  margin:20px 0 25px 0;
+}
+
+div.search_filter span {
+  padding:7px; 
+  background-color:#F0F0F0;
+  border:#cccccc 1px solid;
+  height:20px;
+  line-height:20px;
+}
+
+div.search_filter img {
+  margin-left: 2px;
+  vertical-align: -2px;
+  width: 13px;
+  height: 13px;
+}
