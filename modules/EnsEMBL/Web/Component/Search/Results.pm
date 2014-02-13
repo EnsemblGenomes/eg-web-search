@@ -1,21 +1,3 @@
-=head1 LICENSE
-
-Copyright [2009-2014] EMBL-European Bioinformatics Institute
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-=cut
-
 package EnsEMBL::Web::Component::Search::Results;
 
 use strict;
@@ -318,7 +300,7 @@ sub render_hit {
     $table->add_row("Species", sprintf '<em><a href="%s">%s</a></em>', $hit->{species_path}, $self->highlight($species));
     
     if ($hit->{location}) {
-      $table->add_row("Location", qq{<a href="$hit->{species_path}/Location/View?r=$hit->{location};g=$hit->{id}">$hit->{location}</a>});
+      $table->add_row("Location", sprintf '<a href="%s/Location/View?r=%s;g=%s">%s</a>', $hit->{species_path}, $self->zoom_location($hit->{location}), $hit->{id}, $hit->{location});
     } 
     
     if ($hit->{gene_synonym}) {
@@ -357,6 +339,21 @@ sub highlight {
   my @terms = grep {$_ and $_ !~ /^AND|OR|NOT$/i} split /\s/, $q; # ignore lucene operator words
   $string =~ s/(\Q$_\E)/<em><strong>$1<\/strong><\/em>/ig foreach @terms;
   return $string;
+}
+
+# zoom out by 20% of gene length 
+# or by 1000 for genes that cross circular orign and we can't calculate the length
+sub zoom_location {
+  my ($self, $location) = @_;
+  my ($region, $start, $end) = split /[:-]/, $location;
+  my $flank = 1000;  
+
+  if ($start < $end) {
+    my $length = $end - $start + 1;
+    $flank = int( $length * 0.2 ); 
+  }
+  
+  return  sprintf '%s:%s-%s',  $region, ( $start - $flank < 1 ? 1 : $start - $flank ), $end + $flank;
 }
 
 sub render_pagination {
