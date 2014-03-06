@@ -290,7 +290,7 @@ sub render_hit {
     
     $table->add_row("Coordinate system", $hit->{coord_system});
     $table->add_row("Species", sprintf '<em><a href="%s">%s</a></em>', $hit->{species_path}, $self->highlight($species));
-    $table->add_row("Location", qq{<a href="$hit->{species_path}/Location/View?r=$hit->{location};g=$hit->{id}">$hit->{location}</a>});    
+    $table->add_row("Location", qq{<a href="$hit->{species_path}/Location/View?r=$hit->{location};g=$hit->{id};db=$hit->{database}">$hit->{location}</a>});    
     $name = "<strong>$name</strong>";
   
   } else {
@@ -300,7 +300,7 @@ sub render_hit {
     $table->add_row("Species", sprintf '<em><a href="%s">%s</a></em>', $hit->{species_path}, $self->highlight($species));
     
     if ($hit->{location}) {
-      $table->add_row("Location", sprintf '<a href="%s/Location/View?r=%s;g=%s">%s</a>', $hit->{species_path}, $self->zoom_location($hit->{location}), $hit->{id}, $hit->{location});
+      $table->add_row("Location", sprintf '<a href="%s/Location/View?r=%s;g=%s;db=">%s</a>', $hit->{species_path}, $self->zoom_location($hit->{location}), $hit->{id}, $hit->{location}, $hit->{database});
     } 
     
     if ($hit->{gene_synonym}) {

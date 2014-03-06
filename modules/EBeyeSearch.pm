@@ -238,7 +238,7 @@ sub get_gene_hits {
   my $domain = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
   my $ws = $self->ws; 
   my $pager = $self->pager;
-  my $fields = ['id','name','description','species','featuretype','location','gene_synonym','genomic_unit','system_name','transcript'];
+  my $fields = ['id','name','description','species','featuretype','location','gene_synonym','genomic_unit','system_name','transcript','database'];
   
   my $query = $self->ebeye_query;
   $query .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
@@ -415,6 +415,7 @@ sub feature2url {
       my $url = "$hit->{species_path}/Gene/Summary?g=$hit->{id}";
       $url .= ";r=$hit->{location}" if $hit->{location};
       $url .= ";t=$transcript" if $transcript;
+      $url .= ";db=$hit->{database}" if $hit->{database}; 
       return $url;
     },
     #...we only have genes for now...
