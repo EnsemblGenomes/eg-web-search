@@ -19,19 +19,12 @@ use warnings;
 use File::Basename qw(dirname);
 use FindBin qw($Bin);
 use Getopt::Long;
-#use Data::Dumper;
 
-BEGIN {
-  my $serverroot = dirname($Bin) . "/../../";
-  unshift @INC, "$serverroot/conf", $serverroot;
-  
-  require SiteDefs;
-  
-  unshift @INC, $_ for @SiteDefs::ENSEMBL_LIB_DIRS;
+use lib '../eg-web-common/utils/'
+use LibDirs;
+use EnsEMBL::Web::DBSQL::WebsiteAdaptor;
+use EnsEMBL::Web::Hub;  
 
-  require EnsEMBL::Web::DBSQL::WebsiteAdaptor;
-  require EnsEMBL::Web::Hub;  
-}
 
 my $nodelete;
 GetOptions ("nodelete" => \$nodelete);
