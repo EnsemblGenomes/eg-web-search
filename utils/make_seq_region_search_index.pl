@@ -20,7 +20,7 @@ use File::Basename qw(dirname);
 use FindBin qw($Bin);
 use Getopt::Long;
 
-use lib '../eg-web-common/utils/'
+use lib '../eg-web-common/utils/';
 use LibDirs;
 use EnsEMBL::Web::DBSQL::WebsiteAdaptor;
 use EnsEMBL::Web::Hub;  
