@@ -244,7 +244,7 @@ sub render_hit_gt {
    my ($self, $gene_tree) = @_;
    my $hub = $self->hub;
    my $table = EnsEMBL::Web::Document::TwoCol->new;
-   my $link =  sprintf '<a class="name" href="%s">%s</a>', $hub->url({ species => 'Multi', type => 'GeneTree', action => undef, gt => $gene_tree->stable_id, __clear => 1 }), $gene_tree->stable_id;
+   my $link =  sprintf '<a class="name" href="%s">%s</a>', $hub->url({ species => 'Multi', type => 'GeneTree/Image', action => undef, gt => $gene_tree->stable_id, __clear => 1 }), $gene_tree->stable_id;
 
    ## some interesting stats...
    my $root_node = $gene_tree->root;
