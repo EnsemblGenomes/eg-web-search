@@ -105,7 +105,7 @@ sub populate_tree {
           'concise' => $title ,
           'url' => $hub->url({ action => "Results", function => "genetree_pancompara" }) . ';' . $search->query_string. ';gtsearch=1;pancompara=1;' . $filter_species,
          }
-    )) if ($display_index eq 'Gene');
+    )) if (($display_index eq 'Gene') && $dba_compara_pan);
     # GeneTrees
   }
 
