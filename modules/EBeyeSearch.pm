@@ -238,7 +238,7 @@ sub get_gene_hits {
   my $domain = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
   my $ws = $self->ws; 
   my $pager = $self->pager;
-  my $fields = ['id','name','description','species','featuretype','location','gene_synonym','genomic_unit','system_name','transcript','database'];
+  my $fields = [qw(id name description species featuretype location gene_synonym genomic_unit system_name transcript database genetree)];
   
   my $query = $self->ebeye_query;
   $query .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
@@ -250,36 +250,6 @@ sub get_gene_hits {
   
   return $hits;
 }
-
-# GeneTrees:
-sub get_all_hits {
-  my ($self) = @_;
-  return {} unless $self->query_term;
-  return $self->get_species_hits if $self->current_index eq 'species';
-
-  my $index = $self->current_index;
-  my $unit = $self->current_unit;
-  my $filter_species = $self->filter_species;
-  my $domain = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
-  my $ws = $self->ws;
-  my $pager = $self->pager;
-  my $fields = ['id','name','description','species','featuretype','location','gene_synonym','genomic_unit','system_name','transcript'];
-
-  my $query = $self->ebeye_query;
-  $query .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-  $query .= " AND species:$filter_species" if $filter_species;
-  
-  my $all_hits;
-  foreach my $i (1..$pager->last_page) {
-    my $first = $i*$pager->entries_per_page - 10;
-    my $hits = $ws->getResultsAsHashArray($domain, $query, $fields, $first, $pager->entries_per_page);
-    push @$all_hits, @$hits;
-  }
-  $_->{url} = $self->feature2url($_) for (@$all_hits);
-  
-  return $all_hits;
-}
-# GeneTrees
 
 sub get_seq_region_hit_counts {
   my ($self) = @_;
