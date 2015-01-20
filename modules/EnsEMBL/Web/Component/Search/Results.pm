@@ -220,7 +220,7 @@ sub render_hit {
 
       foreach my $id (@ids) {
         my $pan     = $id =~ /^EG/i;
-        my $caption = sprintf '(%s Compara)', $pan ? 'Pan-taxanomic' : ucfirst($hit->{genomic_unit});
+        my $caption = sprintf '(%s Compara)', $pan ? 'Pan-taxanomic' : ucfirst($hit->{genomic_unit} =~ s/s$//r);
         my $url     = sprintf '%s/Gene/Compara_Tree%s?g=%s', $hit->{species_path}, $pan ? '/pan_compara' : '', $hit->{id}; 
         push @links, sprintf '<a href="%s">%s</a> %s', $url, $self->highlight($id), $caption;
       }
