@@ -204,21 +204,20 @@ sub render_hit {
       $table->add_row("Location", sprintf '<a href="%s/Location/View?r=%s;g=%s;db=">%s</a>', $hit->{species_path}, $self->zoom_location($hit->{location}), $hit->{id}, $hit->{location}, $hit->{database});
     } 
     
-    if ($hit->{gene_synonym}) {
+    if (@{$hit->{gene_synonym}}) {
       my %unique;
-      foreach my $synonym (split /\n/, $hit->{gene_synonym}) { 
+      foreach my $synonym (@{$hit->{gene_synonym}}) { 
         (my $key = lc $synonym) =~ s/[^a-z0-9]/_/ig;
         (my $value = ucfirst $synonym) =~ s/-/ /g;
         $unique{$key} = $value;
       }
-      $table->add_row("Synonyms", $self->highlight(join(', ', sort values %unique)));
+      $table->add_row("Synonyms", $self->highlight(join('<br /> ', sort values %unique)));
     }
 
-    if ($hit->{genetree}) {
-      my @ids = split /\n/, $hit->{genetree};
+    if (@{$hit->{genetree}}) {
       my @links;
 
-      foreach my $id (@ids) {
+      foreach my $id (@{$hit->{genetree}}) {
         my $pan     = $id =~ /^EG/i;
         my $caption = sprintf '(%s Compara)', $pan ? 'Pan-taxonomic' : ucfirst($hit->{genomic_unit} =~ s/s$//r);
         my $url     = sprintf '%s/Gene/Compara_Tree%s?g=%s', $hit->{species_path}, $pan ? '/pan_compara' : '', $hit->{id}; 

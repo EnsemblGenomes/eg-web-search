@@ -20,10 +20,10 @@ package EBeyeSearch;
 
 use strict;
 use Data::Dumper;
-use EBeyeSearch::EBeyeWSWrapper;
 use Data::Page;
 use DBI;
 use URI::Escape;
+use EBeyeSearch::REST;
 
 my $results_cutoff = 10000;
 my $default_pagesize = 10; 
@@ -34,8 +34,8 @@ sub new {
   my($class, $hub) = @_;
     
   my $self = bless {
-    hub => $hub,
-    ws  => EBeyeSearch::EBeyeWSWrapper->new(),
+    hub  => $hub,
+    rest => EBeyeSearch::REST->new(base_url => $SiteDefs::EBEYE_REST_ENDPOINT),
   }, $class;
   
   return $self;
@@ -43,6 +43,7 @@ sub new {
 
 sub hub            { return $_[0]->{hub} };
 sub ws             { return $_[0]->{ws} };
+sub rest           { return $_[0]->{rest} };
 sub query_term     { return $_[0]->hub->param('q') };
 sub species        { return $_[0]->hub->param('species') || 'all' };
 sub filter_species { return $_[0]->hub->param('filter_species') };
@@ -112,10 +113,7 @@ sub hit_count {
       $self->filter_species,
     );
     my $index = $self->current_index;
-    foreach my $domain ($self->ws->getDetailedNumberOfResults('ensemblGenomes', $query)) {
-      next unless $domain->{domainId} =~ /^ensemblGenomes_$index$/i;
-      return $self->{_hit_count} = $domain->{numberOfResults} || 0;
-    }
+    return $self->{_hit_count} = $self->rest->get_results_count("ensemblGenomes_$index", $query) || 0;
   
   } else {
   
@@ -136,35 +134,27 @@ sub get_hit_counts {
   my $domains_by_unit;
   my $hit_counts;
 
-  # domain hit counts for each ensemblgenomes unit
+  # ensembl genomes gene
   my @units = $self->site =~ /^(ensemblthis|ensemblunit)$/ ? ($species_defs->GENOMIC_UNIT) : @{$SiteDefs::EBEYE_SEARCH_UNITS};
-   
-  foreach my $unit (@units) {  
-    $domains_by_unit->{$unit} = [$self->ws->getDetailedNumberOfResults('ensemblGenomes', "$query AND genomic_unit:$unit")];
-  }
-  
-  if ($self->site eq 'ensembl_all') {
-    # add in domain hit counts for ensembl (we treat ensembl as a unit)
-    eval {
-      $domains_by_unit->{ensembl} = [$self->ws->getDetailedNumberOfResults('ensembl', $query)]; 
-    };
-    warn $@ if $@;
+  foreach my $unit (@units) {
+    my $count = $self->rest->get_results_count('ensemblGenomes_gene', "$query AND genomic_unit:$unit");
+    $hit_counts->{gene}->{by_unit}->{$unit} = $count if $count > 0;
   }
 
-  # rearrange hit counts by index/unit
-  foreach my $unit (keys %$domains_by_unit) {
-    foreach my $domain (@{$domains_by_unit->{$unit}}) {
-      (my $index = $domain->{domainId}) =~ s/^.*_([^_]+)$/$1/; # e.g. ensembl_gene > gene  
-      my $count = $domain->{numberOfResults};
-      $hit_counts->{$index}->{by_unit}->{$unit} = $count if $count > 0;
-    }
+  # ensembl gene
+  if ($self->site eq 'ensembl_all') {
+    my $count;
+    eval { $count = $self->rest->get_results_count('ensembl_gene', $query) };
+    warn $@ if $@;
+    $hit_counts->{gene}->{by_unit}->{'ensembl'} = $count if $count > 0;
   }
   
+  # species  
   if ($self->species eq 'all' and my $counts = $self->get_species_hit_counts) {
-    # add in species hit counts
     $hit_counts->{species}->{by_unit} = $counts;
   }
   
+  # seq reguion
   if (my $counts = $self->get_seq_region_hit_counts) {
     $hit_counts->{'sequence_region'}->{by_unit} = $counts;
   }
@@ -209,12 +199,8 @@ sub get_facet_species {
   my $unit         = $self->current_unit;
   my $domain       = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
   my $query        = $unit eq 'ensembl' ? $self->ebeye_query : $self->ebeye_query . " AND genomic_unit:$unit";
-  my $facets       = $self->ws->getFacets($domain, $query);
-  my $facet_values = $facets->{facetValues}->{FacetValue};
-  
-  $facet_values = [$facet_values] unless ref $facet_values eq 'ARRAY';
-    
-  my @taxon_ids    = map {$_->{value}} @{ $facet_values };
+  my $facet_values = $self->rest->get_facet_values($domain, $query, 'TAXONOMY', {facetcount => 1000});
+  my @taxon_ids    = map {$_->{value}} @$facet_values;
   my $dbh          = new EnsEMBL::Web::DBSQL::WebsiteAdaptor($self->hub)->db; 
   my @species; 
   
@@ -232,22 +218,30 @@ sub get_gene_hits {
   my ($self) = @_;
   return {} unless $self->query_term;
   
-  my $index = $self->current_index;
-  my $unit = $self->current_unit;
+  my $index          = $self->current_index;
+  my $unit           = $self->current_unit;
   my $filter_species = $self->filter_species;
-  my $domain = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
-  my $ws = $self->ws; 
-  my $pager = $self->pager;
-  my $fields = [qw(id name description species featuretype location gene_synonym genomic_unit system_name transcript database genetree)];
-  
-  my $query = $self->ebeye_query;
-  $query .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-  $query .= " AND species:$filter_species" if $filter_species;
+  my $domain         = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
+  my $pager          = $self->pager;
+  my @single_fields  = qw(id name description species featuretype location genomic_unit system_name database);
+  my @multi_fields   = qw(transcript gene_synonym genetree);
+  my $query          = $self->ebeye_query;
+     $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
+     $query         .= " AND species:$filter_species" if $filter_species;
 
-  my $hits = $ws->getResultsAsHashArray($domain, $query, $fields, $pager->first - 1, $pager->entries_per_page);
+  my $hits = $self->rest->get_results_as_hashes($domain, $query, 
+    {
+      fields => join ',', @single_fields, @multi_fields, 
+      start  => $pager->first - 1, 
+      size   => $pager->entries_per_page
+    }, 
+    { single_values => \@single_fields }
+  );
 
-  $_->{url} = $self->feature2url($_) for (@$hits);
-  
+  $self->expand_hit($_) for @$hits;
+
+#  $debug && warn Data::Dumper::Dumper $hits;
+
   return $hits;
 }
 
@@ -375,7 +369,7 @@ sub species_path {
   return $path;
 }
 
-sub feature2url {
+sub expand_hit {
   my ($self, $hit) =@_;
  
   my %lookup = (
@@ -394,8 +388,7 @@ sub feature2url {
   my $is_ensembl = ($hit->{domain_source} =~ /ensembl_gene/m);
    
   $hit->{species_path} = $self->species_path( $hit->{system_name}, $hit->{genomic_unit}, $is_ensembl );
-
-  return eval { $lookup{uc $hit->{featuretype}}($hit) } || '';
+  $hit->{url}          = eval { $lookup{uc $hit->{featuretype}}($hit) } || '';
 }
 
 sub unit_sort {
