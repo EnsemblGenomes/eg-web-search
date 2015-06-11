@@ -212,7 +212,7 @@ sub psychic {
 ##EBEYE
       $species = 'all' if (lc($species) eq 'multi' or $site_type eq 'ensemblunit');
       if ($species and lc($species) ne 'all') {
-        $species = $species_defs->species_label($species, 1);
+        $species = $species_defs->get_config($species, 'SPECIES_COMMON_NAME');
       }
 ##EBEYE
 

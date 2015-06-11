@@ -35,7 +35,7 @@ sub render {
   my $hub                 = $self->hub;
   my $species_defs        = $hub->species_defs;
   my $page_species        = $hub->species || 'Multi';
-  my $species_name        = $page_species eq 'Multi' ? '' : $species_defs->DISPLAY_NAME;
+  my $species_name        = $page_species eq 'Multi' ? '' : $species_defs->get_config($hub->species, 'SPECIES_COMMON_NAME');
   my $search_url          = $species_defs->ENSEMBL_WEB_ROOT . "$page_species/psychic";
   my $is_home_page        = $page_species eq 'Multi';
   my $is_bacteria         = $species_defs->GENOMIC_UNIT =~ /bacteria/i;
@@ -43,12 +43,8 @@ sub render {
   my $input_size          = $is_home_page ? 30 : 50;
   my $q                   = $hub->param('q');
 
-  my $collection;
-  if ($is_bacteria and !$species_name and !$is_home_page) {
-    $collection = (split('/', $ENV{REQUEST_URI}))[1];
-    $collection = undef unless grep {$_ eq $collection} @{$species_defs->ENSEMBL_DATASETS};
-  }
-  
+warn "PS $page_species SN $species_name";
+
   # form
   my $form = EnsEMBL::Web::Form->new({'action' => $search_url, 'method' => 'get', 'skip_validation' => 1, 'class' => [ $is_home_page ? 'homepage-search-form' : (), 'search-form', 'clear' ]});
   $form->add_hidden({'name' => 'site', 'value' => $default_search_code});
@@ -65,9 +61,8 @@ sub render {
   }
 
   if (keys %$sample_data) {
-    my $collection_param = $collection ? ";collection=$collection" : '';
     $examples = join ' or ', map { $sample_data->{$_}
-      ? qq(<a class="nowrap" href="$search_url?q=$sample_data->{$_};site=$default_search_code$collection_param">$sample_data->{$_}</a>)
+      ? qq(<a class="nowrap" href="$search_url?q=$sample_data->{$_};site=$default_search_code">$sample_data->{$_}</a>)
       : ()
     } qw(GENE_TEXT LOCATION_TEXT SEARCH_TEXT);
     $examples = qq(<p class="search-example">e.g. $examples</p>) if $examples;
@@ -80,11 +75,7 @@ sub render {
 
   # species dropdown
   if ($page_species eq 'Multi') {
-    if ($is_bacteria) {
-      $self->_add_collection_dropdown($field, $collection);
-    } else {
-      $self->_add_species_dropdown($field);
-    }
+    $self->_add_species_dropdown($field);
   }
 
   # search input box & submit button
@@ -121,31 +112,5 @@ sub _add_species_dropdown {
     ]
   }, 1)->first_child->after('label', {'inner_HTML' => 'for', 'for' => 'q'});
 }
-
-sub _add_collection_dropdown {
-  my ($self, $field, $collection) = @_;
-  my $hub          = $self->hub;
-  my $species_defs = $hub->species_defs;
-  my %species; 
-  my $display_name;
-  foreach(@{$species_defs->ENSEMBL_DATASETS}) {
-    (my $display_name = $species_defs->get_config($_, 'DISPLAY_NAME')) =~ s/_/ /; # hack for E/S
-    $species{$display_name} = $_; 
-  }
-  my %common_names = reverse %species;
-
-  $field->add_element({
-    'type'    => 'dropdown',
-    'name'    => 'collection',
-    'id'      => 'species',
-    'class'   => 'input',
-    'values'  => [
-      {'value' => '', 'caption' => 'All collections'},
-      {'value' => '', 'caption' => '---', 'disabled' => 1},
-      map({'value' => $species{$_}, 'caption' => $_, 'selected' => $_ eq $collection}, sort { uc $a cmp uc $b } keys %species)
-    ]
-  }, 1)->first_child->after('label', {'inner_HTML' => 'for', 'for' => 'q'});
-}
-
 
 1;
