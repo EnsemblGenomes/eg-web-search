@@ -231,7 +231,7 @@ sub get_gene_hits {
 
   my $hits = $self->rest->get_results_as_hashes($domain, $query, 
     {
-      fields => join ',', @single_fields, @multi_fields, 
+      fields => join(',', @single_fields, @multi_fields), 
       start  => $pager->first - 1, 
       size   => $pager->entries_per_page
     }, 
