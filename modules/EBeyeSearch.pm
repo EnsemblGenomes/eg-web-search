@@ -435,7 +435,7 @@ sub get_display_name {
   return @{ $dbh->selectrow_arrayref($sql, undef, $species) || ['unknown'] };
 };
 
-my $escape_chars = quotemeta '+-&|!(){}[]^"~*?:\\';
+my $escape_chars = quotemeta '+-&|!(){}[]^"~*?:/\\';
 sub escape {
     my ( $self, $text ) = @_;
     $text =~ s/([$escape_chars])/\\$1/g;
