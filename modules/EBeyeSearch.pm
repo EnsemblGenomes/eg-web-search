@@ -83,8 +83,8 @@ sub ebeye_query {
   
   my @parts;
   push @parts, $self->query_term;
-  push @parts, 'species:' . $self->species if $self->species ne 'all';
-  push @parts, 'collection:' . $self->collection if $self->collection ne 'all';
+  push @parts, 'species:' . $self->escape($self->species) if $self->species ne 'all';
+  push @parts, 'collection:' . $self->escape($self->collection) if $self->collection ne 'all';
   
   return join ' AND ', @parts;
 }
@@ -110,7 +110,7 @@ sub hit_count {
     my $query = sprintf("%s AND genomic_unit:%s AND species:%s",
       $self->ebeye_query,
       $self->current_unit,
-      $self->filter_species,
+      $self->escape($self->filter_species),
     );
     my $index = $self->current_index;
     return $self->{_hit_count} = $self->rest->get_results_count("ensemblGenomes_$index", $query) || 0;
@@ -227,7 +227,7 @@ sub get_gene_hits {
   my @multi_fields   = qw(transcript gene_synonym genetree);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND species:$filter_species" if $filter_species;
+     $query         .= sprintf(' AND species:%s', $self->escape($filter_species)) if $filter_species;
 
   my $hits = $self->rest->get_results_as_hashes($domain, $query, 
     {
@@ -434,5 +434,12 @@ sub get_display_name {
   my $sql = "SELECT name FROM species_search WHERE species = ? LIMIT 1";
   return @{ $dbh->selectrow_arrayref($sql, undef, $species) || ['unknown'] };
 };
+
+my $escape_chars = quotemeta '+-&|!(){}[]^"~*?:\\';
+sub escape {
+    my ( $self, $text ) = @_;
+    $text =~ s/([$escape_chars])/\\$1/g;
+    return $text;
+}
 
 1;
