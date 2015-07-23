@@ -137,7 +137,7 @@ sub get_species_data {
       name => get_meta_value($adaptor, $id, 'species.display_name'),
       assembly_name => get_meta_value($adaptor, $id, 'assembly.name'),
       taxonomy_id => get_meta_value($adaptor, $id, 'species.taxonomy_id'),
-      ena_records => [get_ena_records($adaptor, $id)],
+      ena_records => $genomic_unit eq 'bacteria' ? [get_ena_records($adaptor, $id)] : [],
     }   
   }
 
