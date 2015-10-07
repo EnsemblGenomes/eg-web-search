@@ -151,7 +151,7 @@ sub get_hit_counts {
   
   # species  
   if ($self->species eq 'all' and my $counts = $self->get_species_hit_counts) {
-    $hit_counts->{species}->{by_unit} = $counts;
+    $hit_counts->{genome}->{by_unit} = $counts;
   }
   
   # seq reguion

@@ -67,7 +67,7 @@ sub populate_tree {
         { 
           'availability' => 1, 
           'concise' => $title ,
-          'url' => $hub->url({ action => "Results", function => "${index}_$unit" }) . ';' . $search->query_string . ';' . $filter_species,
+          'url' => $hub->url({ action => "Results", function => "${index}_$unit" }) . ';' . $search->query_string . ';' . ($index ne 'genome' ? $filter_species : ''),
         }
       ));
     }
