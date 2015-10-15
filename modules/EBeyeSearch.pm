@@ -28,7 +28,7 @@ use EBeyeSearch::REST;
 my $results_cutoff = 10000;
 my $default_pagesize = 10; 
 
-my $debug = 0;
+my $debug = 1;
 
 sub new {
   my($class, $hub) = @_;
@@ -83,7 +83,10 @@ sub ebeye_query {
   
   my @parts;
   push @parts, $self->query_term;
-  push @parts, 'species:' . $self->species if $self->species ne 'all';
+## for EG29 we accidentally used production name instead of display name in the index  
+  #push @parts, 'species:' . $self->species if $self->species ne 'all';
+  push @parts, 'species:' . $self->get_production_name($self->species) if $self->species ne 'all';
+##  
   push @parts, 'collection:' . $self->collection if $self->collection ne 'all';
   
   return join ' AND ', @parts;
@@ -110,7 +113,10 @@ sub hit_count {
     my $query = sprintf("%s AND genomic_unit:%s AND species:%s",
       $self->ebeye_query,
       $self->current_unit,
-      $self->filter_species,
+## for EG29 we accidentally used production name instead of display name in the index  
+      #$self->filter_species,
+      $self->get_production_name($self->filter_species),
+##
     );
     my $index = $self->current_index;
     return $self->{_hit_count} = $self->rest->get_results_count("ensemblGenomes_$index", $query) || 0;
@@ -184,7 +190,7 @@ sub get_hit_counts {
 
 sub get_hits {
   my $self = shift;
-  if ($self->current_index eq 'species') {
+  if ($self->current_index eq 'genome') {
     return $self->get_species_hits;
   } elsif ($self->current_index eq 'sequence_region') {
     return $self->get_seq_region_hits;
@@ -227,7 +233,10 @@ sub get_gene_hits {
   my @multi_fields   = qw(transcript gene_synonym genetree);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND species:$filter_species" if $filter_species;
+## for EG29 we accidentally used production name instead of display name in the index       
+     #$query         .= " AND species:$filter_species" if $filter_species;
+     $query         .= " AND species:".$self->get_production_name($self->filter_species) if $filter_species;
+##
 
   my $hits = $self->rest->get_results_as_hashes($domain, $query, 
     {
@@ -424,7 +433,7 @@ sub get_production_name {
   my $species_name = shift;
   my $dbh = new EnsEMBL::Web::DBSQL::WebsiteAdaptor($self->hub)->db;
   my $sql = "SELECT species FROM species_search WHERE name = ? LIMIT 1";
-  return @{ $dbh->selectrow_arrayref($sql, undef, $species_name) || ['unknown'] };
+  return $dbh->selectrow_arrayref($sql, undef, $species_name)->[0] || 'unknown';
 };
 
 sub get_display_name { 
@@ -432,7 +441,7 @@ sub get_display_name {
   my $species = shift;
   my $dbh = new EnsEMBL::Web::DBSQL::WebsiteAdaptor($self->hub)->db;
   my $sql = "SELECT name FROM species_search WHERE species = ? LIMIT 1";
-  return @{ $dbh->selectrow_arrayref($sql, undef, $species) || ['unknown'] };
+  return $dbh->selectrow_arrayref($sql, undef, $species)->[0] || 'unknown';
 };
 
 1;
