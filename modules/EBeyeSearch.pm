@@ -184,7 +184,7 @@ sub get_hit_counts {
 
 sub get_hits {
   my $self = shift;
-  if ($self->current_index eq 'species') {
+  if ($self->current_index eq 'genome') {
     return $self->get_species_hits;
   } elsif ($self->current_index eq 'sequence_region') {
     return $self->get_seq_region_hits;
