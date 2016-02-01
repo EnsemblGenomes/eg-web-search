@@ -210,17 +210,14 @@ sub psychic {
   
   if (!$flag) {
 ##EBEYE
-      $species = 'all' if (lc($species) eq 'multi' or $site_type eq 'ensemblunit');
-      if ($species and lc($species) ne 'all') {
-        $species = $species_defs->get_config($species, 'SPECIES_COMMON_NAME');
-      }
+    $species = 'all' if (lc($species) eq 'multi' or $site_type eq 'ensemblunit');
+    if ($species and lc($species) ne 'all') {
+      $species = $species_defs->get_config($species, 'SPECIES_COMMON_NAME');
+      $species =~ s/(\[|\])//g;
+    }
 ##EBEYE
 
-    $url = 
-      $query =~ /^BLA_\w+$/               ? $self->escaped_url('/Multi/blastview/%s', $query) :                                                                 ## Blast ticket
-      $query =~ /^\s*([ACGT]{20,})\s*$/i  ? $self->escaped_url('/Multi/blastview?species=%s;_query_sequence=%s;query=dna;database=dna', $species, $1) :         ## BLAST seq search
-      $query =~ /^\s*([A-Z]{20,})\s*$/i   ? $self->escaped_url('/Multi/blastview?species=%s;_query_sequence=%s;query=peptide;database=peptide', $species, $1) : ## BLAST seq search
-      $self->escaped_url(($species eq 'ALL' || !$species ? '/Multi' : $species_path) . "/$script?species=%s;idx=%s;q=%s", $species || 'all', $index, $query);    # everything else!
+    $url = $self->escaped_url(($species eq 'ALL' || !$species ? '/Multi' : $species_path) . "/$script?species=%s;idx=%s;q=%s", $species || 'all', $index, $query);
   }
 
 ## EG @ add EG params
