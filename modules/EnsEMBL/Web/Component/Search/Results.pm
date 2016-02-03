@@ -42,11 +42,16 @@ sub content {
       $search->filter_species,
       $search->query_string
     ); 
-  } elsif ($search->hit_count > 1 and $search->current_unit ne 'ensembl' and $search->current_index eq 'gene' and $search->species eq 'all') {
+  } elsif ($search->hit_count > 1 and $search->current_unit ne 'ensembl' and $search->current_index =~ /gene|variant|sequence_region/ and $search->species eq 'all') {
    
     my @species = @{ $search->get_facet_species };
-    $html .= @species > 200 ? $self->_render_filter_autocomplete(\@species)
-                            : $self->_render_filter_dropdown(\@species);
+    
+    if (@species) {
+      $html .= @species > 200 ? $self->_render_filter_autocomplete(\@species)
+                              : $self->_render_filter_dropdown(\@species);
+    } else {
+      warn "No species found for search filter list - perhaps genome info db is missing or misconfigured?";
+    }
   }
 
   if ($search->hit_count) {
@@ -190,6 +195,24 @@ sub render_hit {
     $table->add_row("Coordinate system", $hit->{coord_system});
     $table->add_row("Species", sprintf '<em><a href="%s">%s</a></em>', $hit->{species_path}, $self->highlight($species));
     $table->add_row("Location", qq{<a href="$hit->{species_path}/Location/View?r=$hit->{location};g=$hit->{id};db=$hit->{database}">$hit->{location}</a>});    
+    $name = "<strong>$name</strong>";
+
+  } elsif ($hit->{featuretype} eq 'Variant') {
+    
+    $table->add_row("Variant ID", sprintf('<a href="%s">%s</a>', $hit->{url}, $self->highlight($hit->{id})));
+    $table->add_row("Species", sprintf '<em><a href="%s">%s</a></em>', $hit->{species_path}, $self->highlight($species));
+    $table->add_row("Source", $self->highlight($hit->{variation_source}));
+    
+    $table->add_row("Synonyms", $self->highlight(join('<br /> ', sort @{$hit->{synonym}}))) if @{$hit->{synonym}};
+    $table->add_row("Phenotypes", $self->highlight(join('<br /> ', sort @{$hit->{phenotype}}))) if @{$hit->{phenotype}};
+    
+    if (my @gene_ids = @{$hit->{associated_gene}}) {
+      my @links = map {sprintf('<a href="%s/Gene/Summary?g=%s">%s</a>', $hit->{species_path}, $_, $_)} sort @gene_ids;
+      $table->add_row("Asscoiated genes", $self->highlight(join('<br /> ', @links)));
+    }
+
+    #$table->add_row("Studies", $self->highlight(join('<br /> ', sort @{$hit->{study}}))) if @{$hit->{study}};
+
     $name = "<strong>$name</strong>";
   
   } else {

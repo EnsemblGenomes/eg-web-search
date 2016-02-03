@@ -55,9 +55,10 @@ sub populate_tree {
 
   my $hit_counts = $search->get_hit_counts;
   
-  while (my ($index, $counts) = each %$hit_counts) {
+  foreach my $index (sort keys %$hit_counts) {
+    my $counts = $hit_counts->{$index};
     (my $display_index = ucfirst($index)) =~ s/_/ /;
-     my $menu = $self->create_submenu( $index,  $display_index . " ($counts->{total})" );   
+    my $menu = $self->create_submenu( $index,  $display_index . " ($counts->{total})" );   
 
     foreach my $unit (sort {$search->unit_sort($a, $b)} keys %{$counts->{by_unit}}) {           
       my $site_name = $SiteDefs::EBEYE_SITE_NAMES->{lc($unit)} || ucfirst($unit);

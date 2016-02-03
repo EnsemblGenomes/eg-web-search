@@ -24,11 +24,12 @@ use Data::Page;
 use DBI;
 use URI::Escape;
 use EBeyeSearch::REST;
+use EnsEMBL::Web::DBSQL::MetaDataAdaptor;
 
 my $results_cutoff = 10000;
 my $default_pagesize = 10; 
 
-my $debug = 1;
+my $debug = 0;
 
 sub new {
   my($class, $hub) = @_;
@@ -137,7 +138,7 @@ sub get_hit_counts {
   # ensembl genomes gene|seqregion|genome
   my @units = $self->site =~ /^(ensemblthis|ensemblunit)$/ ? ($species_defs->GENOMIC_UNIT) : @{$SiteDefs::EBEYE_SEARCH_UNITS};
   foreach my $unit (@units) {
-    foreach my $domain (qw(gene seqregion genome)) {
+    foreach my $domain (qw(gene seqregion genome variant)) {
       my $count = $self->rest->get_results_count("ensemblGenomes_$domain", "$query AND genomic_unit:$unit");
       my $domain_key = $domain eq 'seqregion' ? 'sequence_region' : $domain;
       $hit_counts->{$domain_key}->{by_unit}->{$unit} = $count if $count > 0;
@@ -177,41 +178,17 @@ sub get_hit_counts {
 
 sub get_hits {
   my $self = shift;
-  if ($self->current_index eq 'genome') {
-    return $self->get_species_hits;
-  } elsif ($self->current_index eq 'sequence_region') {
-    return $self->get_seq_region_hits;
-  } else { 
-    return $self->get_gene_hits;  
-  }  
-}
-
-sub get_facet_species {
-  my $self         = shift;
-  my $index        = $self->current_index;
-  my $unit         = $self->current_unit;
-  my $division     = 'Ensembl' . $unit eq 'ensembl' ? '' : ucfirst($unit);
-  my $domain       = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
-  my $query        = $unit eq 'ensembl' ? $self->ebeye_query : $self->ebeye_query . " AND genomic_unit:$unit";
-  my $facet_values = $self->rest->get_facet_values($domain, $query, 'TAXONOMY', {facetcount => 1000});
-  my @taxon_ids    = map {$_->{value}} @$facet_values;
-  my $meta         = EnsEMBL::Web::DBSQL::MetaDataAdaptor->new($hub);
+  my $dispatcher = {
+    genome          => sub { $self->get_species_hits },
+    sequence_region => sub { $self->get_seq_region_hits },
+    variant         => sub { $self->get_variant_hits },
+    gene            => sub { $self->get_gene_hits },
+  };
+  my $hits = $dispatcher->{$self->current_index}->();
   
-  if (!$meta) {
-    warn "Cannot get facet species: looks like the genome info database is unavailable";
-    return [];
-  }
+  $debug && Data::Dumper->Dump([$hits], ['$hits']) . "\n";
 
-  my $genomes;
-  if (@taxon_ids < 1000 or $unit eq 'ensembl') {
-    # get species names for given taxon ids
-    $genomes = $meta->genome_info_adaptor->fetch_all_by_fetch_all_by_taxonomy_ids(\@taxon_ids);
-  } else {
-    # we hit the EBEye facet limit - so present all species instead
-    $genomes = $meta->genome_info_adaptor->fetch_all_by_division($division);
-  }
-  
-  return [ map {ucfirst $_->species} @$genomes ];  
+  return $hits;
 }
 
 sub get_gene_hits {
@@ -251,8 +228,6 @@ sub get_gene_hits {
     $hit->{species_path} = $self->species_path( $hit->{system_name}, $hit->{genomic_unit}, $is_ensembl );
   }
 
-#  $debug && warn Data::Dumper::Dumper $hits;
-
   return $hits;
 }
 
@@ -285,8 +260,6 @@ sub get_seq_region_hits {
     $hit->{url}          = sprintf ('%s/Location/View?r=%s', $species_path, $hit->{location});
   }
 
-#  $debug && warn Data::Dumper::Dumper $hits;
-
   return $hits;
 }
 
@@ -296,12 +269,10 @@ sub get_species_hits {
   
   my $index          = $self->current_index;
   my $unit           = $self->current_unit;
-  my $filter_species = $self->filter_species;
   my $pager          = $self->pager;
   my @fields         = qw(id name species production_name assembly_name taxonomy_id genomic_unit);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND species:$filter_species" if $filter_species;
 
   my $hits = $self->rest->get_results_as_hashes('ensemblGenomes_genome', $query, 
     {
@@ -319,9 +290,69 @@ sub get_species_hits {
     $hit->{url}          = $species_path;
   }
 
-#  $debug && warn Data::Dumper::Dumper $hits;
+  return $hits;
+}
+
+sub get_variant_hits {
+  my ($self) = @_;
+  return {} unless $self->query_term;
+  
+  my $index          = $self->current_index;
+  my $unit           = $self->current_unit;
+  my $filter_species = $self->filter_species;
+  my $pager          = $self->pager;
+  my @single_fields  = qw(id name species source production_name genomic_unit variation_source);
+  my @multi_fields   = qw(synonym associated_gene phenotype study);
+  my $query          = $self->ebeye_query;
+     $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
+     $query         .= " AND species:$filter_species" if $filter_species;
+
+  my $hits = $self->rest->get_results_as_hashes('ensemblGenomes_variant', $query, 
+    {
+      fields => join(',', @single_fields, @multi_fields), 
+      start  => $pager->first - 1, 
+      size   => $pager->entries_per_page
+    }, 
+    { single_values => \@single_fields }
+  );
+
+  foreach my $hit (@$hits) {
+    my $species_path = $self->species_path( $hit->{production_name}, $self->current_unit ); 
+    $hit->{featuretype}  = 'Variant',
+    $hit->{species_path} = $species_path;
+    $hit->{url}          = sprintf ('%s/Variation/Summary?v=%s', $species_path, $hit->{id});
+  }
 
   return $hits;
+}
+
+
+sub get_facet_species {
+  my $self         = shift;
+  my $index        = $self->current_index;
+  my $unit         = $self->current_unit;
+  my $division     = 'Ensembl' . $unit eq 'ensembl' ? '' : ucfirst($unit);
+  my $domain       = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
+  my $query        = $unit eq 'ensembl' ? $self->ebeye_query : $self->ebeye_query . " AND genomic_unit:$unit";
+  my $facet_values = $self->rest->get_facet_values($domain, $query, 'TAXONOMY', {facetcount => 1000});
+  my @taxon_ids    = map {$_->{value}} @$facet_values;
+  my $meta         = EnsEMBL::Web::DBSQL::MetaDataAdaptor->new($self->hub);
+  
+  unless ($meta and $meta->genome_info_adaptor) {
+    warn "Cannot get facet species: looks like the genome info database is unavailable";
+    return [];
+  }
+
+  my $genomes;
+  if (@taxon_ids < 1000 or $unit eq 'ensembl') {
+    # get species names for given taxon ids
+    $genomes = $meta->genome_info_adaptor->fetch_all_by_taxonomy_ids(\@taxon_ids);
+  } else {
+    # we hit the EBEye facet limit - so present all species instead
+    $genomes = $meta->genome_info_adaptor->fetch_all_by_division($division);
+  }
+  
+  return [ map {ucfirst $_->species} @$genomes ];  
 }
 
 # Hacky method to make a cross-site species path
