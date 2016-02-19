@@ -16,14 +16,14 @@ limitations under the License.
 
 =cut
 
-package EBeyeSearch;
+package EnsEMBL::Web::EBeyeSearch;
 
 use strict;
 use Data::Dumper;
 use Data::Page;
 use DBI;
 use URI::Escape;
-use EBeyeSearch::REST;
+use EnsEMBL::Web::EBeyeSearch::REST;
 use EnsEMBL::Web::DBSQL::MetaDataAdaptor;
 
 my $results_cutoff = 10000;
@@ -36,7 +36,7 @@ sub new {
     
   my $self = bless {
     hub  => $hub,
-    rest => EBeyeSearch::REST->new(base_url => $SiteDefs::EBEYE_REST_ENDPOINT),
+    rest => EnsEMBL::Web::EBeyeSearch::REST->new(base_url => $SiteDefs::EBEYE_REST_ENDPOINT),
   }, $class;
   
   return $self;
