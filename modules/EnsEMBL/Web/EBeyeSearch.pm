@@ -139,7 +139,9 @@ sub get_hit_counts {
   my @units = $self->site =~ /^(ensemblthis|ensemblunit)$/ ? ($species_defs->GENOMIC_UNIT) : @{$SiteDefs::EBEYE_SEARCH_UNITS};
   foreach my $unit (@units) {
     foreach my $domain (qw(gene seqregion genome variant)) {
-      my $count = $self->rest->get_results_count("ensemblGenomes_$domain", "$query AND genomic_unit:$unit");
+      my $count;
+      eval { $count = $self->rest->get_results_count("ensemblGenomes_$domain", "$query AND genomic_unit:$unit") };
+      warn $@ if $@;
       my $domain_key = $domain eq 'seqregion' ? 'sequence_region' : $domain;
       $hit_counts->{$domain_key}->{by_unit}->{$unit} = $count if $count > 0;
     }
