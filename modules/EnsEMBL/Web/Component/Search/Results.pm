@@ -130,10 +130,14 @@ sub _render_results_message {
 
 sub _render_filter_dropdown {
   my ($self, $species) = @_;
+
+  my $hub = $self->hub;
+  my $species_defs = $hub->species_defs;
     
   my $options;
   foreach (sort @$species) {
-    $options .= qq{<option value="$_">$_</option>\n};
+    my $display_name = $species_defs->get_config($_, 'DISPLAY_NAME');
+    $options .= sprintf '<option value="%s">%s</option>\n', $display_name, $display_name;
   }
   
   return qq{
