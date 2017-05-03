@@ -43,8 +43,6 @@ sub render {
   my $input_size          = $is_home_page ? 30 : 50;
   my $q                   = $hub->param('q');
 
-warn "PS $page_species SN $species_name";
-
   # form
   my $form = EnsEMBL::Web::Form->new({'action' => $search_url, 'method' => 'get', 'skip_validation' => 1, 'class' => [ $is_home_page ? 'homepage-search-form' : (), 'search-form', 'clear' ]});
   $form->add_hidden({'name' => 'site', 'value' => $default_search_code});
