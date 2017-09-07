@@ -202,7 +202,7 @@ sub get_gene_hits {
   my $filter_species = $self->filter_species;
   my $domain         = $unit eq 'ensembl' ? "ensembl_$index" : "ensemblGenomes_$index";
   my $pager          = $self->pager;
-  my @single_fields  = qw(id name description species featuretype location genomic_unit system_name database);
+  my @single_fields  = qw(id name description species featuretype location genomic_unit system_name database history_url);
   my @multi_fields   = qw(transcript gene_synonym genetree);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
@@ -227,6 +227,10 @@ sub get_gene_hits {
     $url .= ";t=$transcript" if $transcript;
     $url .= ";db=$hit->{database}" if $hit->{database}; 
     $hit->{url} = $url;
+    if($hit->{'history_url'}) {
+      $hit->{url}   = "/$hit->{history_url}";
+      $hit->{name}  = $hit->{id};
+    }
   }
 
   return $hits;
