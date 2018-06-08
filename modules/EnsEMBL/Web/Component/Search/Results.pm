@@ -212,7 +212,7 @@ sub render_hit {
     
     if (my @gene_ids = @{$hit->{associated_gene}}) {
       my @links = map {sprintf('<a href="%s/Gene/Summary?g=%s">%s</a>', $hit->{species_path}, $_, $_)} sort @gene_ids;
-      $table->add_row("Asscoiated genes", $self->highlight(join('<br /> ', @links)));
+      $table->add_row("Associated genes", $self->highlight(join('<br /> ', @links)));
     }
 
     #$table->add_row("Studies", $self->highlight(join('<br /> ', sort @{$hit->{study}}))) if @{$hit->{study}};
