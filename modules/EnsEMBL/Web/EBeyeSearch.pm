@@ -29,7 +29,7 @@ use EnsEMBL::Web::DBSQL::MetaDataAdaptor;
 my $results_cutoff = 10000;
 my $default_pagesize = 10; 
 
-my $debug = 0;
+my $debug = 1;
 
 sub new {
   my($class, $hub) = @_;
@@ -79,12 +79,28 @@ sub current_sitename {
   return $SiteDefs::EBEYE_SITE_NAMES->{lc($self->current_unit)} || $self->current_unit;
 }
 
+sub production_name {
+  my ($self, $display_name) = @_;
+  
+  my $display_names = $self->hub->species_defs->SPECIES_DISPLAY_NAME;
+  
+  my $production_name;
+  foreach my $key (keys %$display_names) {
+    if ($display_names->{$key} eq $display_name) {
+      $production_name = $key;
+      last;
+    }
+  } 
+
+  return $production_name;
+}
+
 sub ebeye_query {
   my ($self, $no_genomic_unit) = @_;
   
   my @parts;
   push @parts, $self->query_term;
-  push @parts, 'species:' . $self->species if $self->species ne 'all';
+  push @parts, 'system_name:' . $self->production_name($self->species) if $self->species ne 'all';
   push @parts, 'collection:' . $self->collection if $self->collection ne 'all';
   
   return join ' AND ', @parts;
@@ -108,10 +124,10 @@ sub hit_count {
   if ($self->filter_species) {
   
     # get dynamic hit count based on current species filter
-    my $query = sprintf("%s AND genomic_unit:%s AND species:%s",
+    my $query = sprintf("%s AND genomic_unit:%s AND system_name:%s",
       $self->ebeye_query,
       $self->current_unit,
-      $self->filter_species,
+      $self->production_name($self->filter_species),
     );
     my $index = $self->current_index;
     return $self->{_hit_count} = $self->rest->get_results_count("ensemblGenomes_$index", $query) || 0;
@@ -206,7 +222,7 @@ sub get_gene_hits {
   my @multi_fields   = qw(transcript gene_synonym genetree);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND species:$filter_species" if $filter_species;
+     $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
 
   my $hits = $self->rest->get_results_as_hashes($domain, $query, 
     {
@@ -247,7 +263,7 @@ sub get_seq_region_hits {
   my @fields         = qw(id name species production_name location coord_system genomic_unit);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND species:$filter_species" if $filter_species;
+     $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
 
   my $hits = $self->rest->get_results_as_hashes('ensemblGenomes_seqregion', $query, 
     {
@@ -310,7 +326,8 @@ sub get_variant_hits {
   my @multi_fields   = qw(synonym associated_gene phenotype study);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND species:$filter_species" if $filter_species;
+     $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
+
 
   my $hits = $self->rest->get_results_as_hashes('ensemblGenomes_variant', $query, 
     {
