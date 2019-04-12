@@ -36,7 +36,7 @@ sub render {
   my $species_defs        = $hub->species_defs;
   my $page_species        = $hub->species || 'Multi';
   my $species_name        = $page_species eq 'Multi' ? '' : $species_defs->get_config($hub->species, 'SPECIES_COMMON_NAME');
-  my $search_url          = $species_defs->ENSEMBL_WEB_ROOT . "$page_species/psychic";
+  my $search_url          = $species_defs->ENSEMBL_WEB_ROOT . "$page_species/Psychic";
   my $is_home_page        = $page_species eq 'Multi';
   my $is_bacteria         = $species_defs->GENOMIC_UNIT =~ /bacteria/i;
   my $default_search_code = $is_home_page ? 'ensemblunit' : 'ensemblthis';
