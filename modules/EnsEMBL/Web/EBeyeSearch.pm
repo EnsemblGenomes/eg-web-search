@@ -291,7 +291,7 @@ sub get_species_hits {
   my $index          = $self->current_index;
   my $unit           = $self->current_unit;
   my $pager          = $self->pager;
-  my @fields         = qw(id name species production_name assembly_name taxonomy_id genomic_unit);
+  my @fields         = qw(id name species production_name assembly_name NCBI_TAXONOMY_ID genomic_unit);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
 
@@ -305,7 +305,7 @@ sub get_species_hits {
   );
 
   foreach my $hit (@$hits) {
-    my $species_path = $self->species_path( $hit->{production_name}, $self->current_unit ); 
+    my $species_path = $self->species_path( $hit->{id}, $self->current_unit ); 
     $hit->{featuretype}  = 'Species',
     $hit->{species_path} = $species_path;
     $hit->{url}          = $species_path;

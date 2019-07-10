@@ -184,13 +184,13 @@ sub render_hit {
   my $species = ucfirst($hit->{species});
   $species =~ s/_/ /;
   
-  my $name = $hit->{name};
+  my $name = $hit->{id};
   
   my $table = EnsEMBL::Web::Document::TwoCol->new;
 
   if ($hit->{featuretype} eq 'Species') {
 
-    $table->add_row("Taxonomy ID", $self->highlight($hit->{taxonomy_id}));
+    $table->add_row("Taxonomy ID", $self->highlight($hit->{NCBI_TAXONOMY_ID}));
     $table->add_row("Assembly", $self->highlight($hit->{assembly_name}));
     $name = "<strong>$name</strong>";
 
