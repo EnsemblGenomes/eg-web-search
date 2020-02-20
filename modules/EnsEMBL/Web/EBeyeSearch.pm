@@ -100,7 +100,15 @@ sub ebeye_query {
   
   my @parts;
   push @parts, $self->query_term;
-  push @parts, 'system_name:' . $self->production_name($self->species) if $self->species ne 'all';
+
+  # This is temporary fix for e99 since EBEye search does not have system_name field in its index (Variant XML does not have system_name)
+  my $species_temp_query = sprintf("(system_name:%s OR production_name:%s)",
+       $self->production_name($self->species),
+       $self->production_name($self->species)) if $self->species ne 'all';
+
+  #push @parts, 'system_name:' . $self->production_name($self->species) if $self->species ne 'all';
+
+  push @parts, $species_temp_query if $self->species ne 'all';
   push @parts, 'collection:' . $self->collection if $self->collection ne 'all';
   
   return join ' AND ', @parts;
@@ -326,8 +334,11 @@ sub get_variant_hits {
   my @multi_fields   = qw(synonym associated_gene phenotype study);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
-
+  #  $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
+  my $species_temp_query = sprintf("(system_name:%s OR production_name:%s)",
+        $self->production_name($self->filter_species),
+        $self->production_name($self->filter_species)) if $filter_species;
+     $query         .= $species_temp_query if $filter_species;
 
   my $hits = $self->rest->get_results_as_hashes('ensemblGenomes_variant', $query, 
     {
