@@ -82,7 +82,7 @@ sub current_sitename {
 sub production_name {
   my ($self, $display_name) = @_;
   
-  my $display_names = $self->hub->species_defs->SPECIES_DISPLAY_NAME;
+  my $display_names = $self->hub->species_defs->{'SPECIES_DISPLAY_NAME'};
   
   my $production_name;
   foreach my $key (keys %$display_names) {
@@ -127,7 +127,7 @@ sub hit_count {
     my $query = sprintf("%s AND genomic_unit:%s AND system_name:%s",
       $self->ebeye_query,
       $self->current_unit,
-      $self->production_name($self->filter_species),
+      $self->filter_species,
     );
     my $index = $self->current_index;
     return $self->{_hit_count} = $self->rest->get_results_count("ensemblGenomes_$index", $query) || 0;
@@ -222,7 +222,7 @@ sub get_gene_hits {
   my @multi_fields   = qw(transcript gene_synonym genetree);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
+     $query         .= " AND system_name:" . $filter_species if $filter_species;
 
   my $hits = $self->rest->get_results_as_hashes($domain, $query, 
     {
@@ -263,7 +263,7 @@ sub get_seq_region_hits {
   my @fields         = qw(id name species production_name location coord_system genomic_unit);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
+     $query         .= " AND system_name:" . $filter_species if $filter_species;
 
   my $hits = $self->rest->get_results_as_hashes('ensemblGenomes_seqregion', $query, 
     {
@@ -326,7 +326,7 @@ sub get_variant_hits {
   my @multi_fields   = qw(synonym associated_gene phenotype study);
   my $query          = $self->ebeye_query;
      $query         .= " AND genomic_unit:$unit" if $unit ne 'ensembl';
-     $query         .= " AND system_name:" . $self->production_name($filter_species) if $filter_species;
+     $query         .= " AND system_name:" . $filter_species if $filter_species;
 
 
   my $hits = $self->rest->get_results_as_hashes('ensemblGenomes_variant', $query, 

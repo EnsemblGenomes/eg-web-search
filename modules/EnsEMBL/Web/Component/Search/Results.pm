@@ -136,8 +136,9 @@ sub _render_filter_dropdown {
     
   my $options;
   foreach (sort @$species) {
-    my $display_name = $species_defs->get_config($_, 'DISPLAY_NAME');
-    $options .= sprintf '<option value="%s">%s</option>\n', $display_name, $display_name;
+    my $display_name = $species_defs->get_config($_, 'SPECIES_DISPLAY_NAME');
+    my $production_name = $species_defs->get_config($_, 'SPECIES_PRODUCTION_NAME');
+    $options .= sprintf '<option value="%s">%s</option>\n', $production_name, $display_name;
   }
   
   return qq{
