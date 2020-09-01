@@ -211,10 +211,6 @@ sub psychic {
   if (!$flag) {
 ##EBEYE
     $species = 'all' if (lc($species) eq 'multi' or $site_type eq 'ensemblunit');
-    if ($species and lc($species) ne 'all') {
-      $species = $species_defs->get_config($species, 'SPECIES_COMMON_NAME');
-      $species =~ s/(\[|\])//g;
-    }
 ##EBEYE
 
     $url = $self->escaped_url(($species eq 'ALL' || !$species ? '/Multi' : $species_path) . "/$script?species=%s;idx=%s;q=%s", $species || 'all', $index, $query);

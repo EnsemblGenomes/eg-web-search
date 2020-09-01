@@ -79,28 +79,12 @@ sub current_sitename {
   return $SiteDefs::EBEYE_SITE_NAMES->{lc($self->current_unit)} || $self->current_unit;
 }
 
-sub production_name {
-  my ($self, $display_name) = @_;
-  
-  my $display_names = $self->hub->species_defs->{'SPECIES_DISPLAY_NAME'};
-  
-  my $production_name;
-  foreach my $key (keys %$display_names) {
-    if ($display_names->{$key} eq $display_name) {
-      $production_name = $key;
-      last;
-    }
-  } 
-
-  return $production_name;
-}
-
 sub ebeye_query {
   my ($self, $no_genomic_unit) = @_;
-  
+
   my @parts;
   push @parts, $self->query_term;
-  push @parts, 'system_name:' . $self->production_name($self->species) if $self->species ne 'all';
+  push @parts, 'system_name:' . $self->species if $self->species ne 'all';
   push @parts, 'collection:' . $self->collection if $self->collection ne 'all';
   
   return join ' AND ', @parts;
@@ -113,7 +97,6 @@ sub pager {
   $pager->total_entries($self->hit_count > 10000 ? 10000 : $self->hit_count);
   $pager->entries_per_page($page_size || 10);
   $pager->current_page($self->current_page);
-  
   return $pager; 
 }
 
