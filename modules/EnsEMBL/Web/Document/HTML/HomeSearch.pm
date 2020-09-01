@@ -93,7 +93,7 @@ sub _add_species_dropdown {
   my $hub          = $self->hub;
   my $species_defs = $hub->species_defs;
   my $favourites   = $hub->get_favourite_species;
-  my %species      = map { $species_defs->get_config($_, 'DISPLAY_NAME') => $_ } @{$species_defs->multi_hash->{'ENSEMBL_DATASETS'}};
+  my %species      = map { $species_defs->get_config($_, 'SPECIES_DISPLAY_NAME') => $_ } @{$species_defs->multi_hash->{'ENSEMBL_DATASETS'}};
   my %common_names = reverse %species;
 
   $field->add_element({
