@@ -84,7 +84,10 @@ sub ebeye_query {
 
   my @parts;
   push @parts, $self->query_term;
-  push @parts, 'system_name:' . $self->species if $self->species ne 'all';
+  if ($self->species ne 'all') {
+    my $prod_name = $self->hub->species_defs->get_config($self->species, 'SPECIES_PRODUCTION_NAME');
+    push @parts, 'system_name:' . $prod_name;
+  }
   push @parts, 'collection:' . $self->collection if $self->collection ne 'all';
   
   return join ' AND ', @parts;
